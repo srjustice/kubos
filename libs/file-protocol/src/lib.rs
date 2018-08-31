@@ -37,7 +37,7 @@ pub use protocol::State;
 const CHUNK_SIZE: usize = 4096;
 
 /// File protocol message types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Message {
     /// TODO: Decide whether or not to keep this
     Sync(String),

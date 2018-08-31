@@ -189,7 +189,9 @@ pub fn parse_success_transmit(message: Value) -> Result<Option<Message>, String>
                     let hash = match piece {
                         Value::String(val) => val,
                         _ => {
-                            return Err("Unable to parse success message: Invalid hash param".to_owned())
+                            return Err(
+                                "Unable to parse success message: Invalid hash param".to_owned()
+                            )
                         }
                     };
 
@@ -394,4 +396,179 @@ pub fn parse_sync(message: Value) -> Result<Option<Message>, String> {
     }
 
     return Ok(None);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_cbor::error::Error;
+    use serde_cbor::{self, de, ser, Value};
+
+    #[test]
+    fn parse_export_request_good() {
+        let data = ser::to_vec_packed(&(
+            100,
+            "export",
+            "abcdefg".to_string(),
+            "/target/path".to_string(),
+            Some(0o600),
+        )).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_export_request(message),
+            Ok(Some(Message::ReqReceive(
+                100,
+                "abcdefg".to_string(),
+                "/target/path".to_string(),
+                Some(0o600)
+            )))
+        );
+    }
+
+    #[test]
+    fn parse_export_request_no_hash() {
+        let data = ser::to_vec_packed(&(100, "export")).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_export_request(message),
+            Err("Unable to parse export message: No hash param".to_string())
+        );
+    }
+
+    #[test]
+    fn parse_import_request_good() {
+        let data = ser::to_vec_packed(&(100, "import", "/import/path".to_string())).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_import_request(message),
+            Ok(Some(Message::ReqTransmit(100, "/import/path".to_string(),)))
+        );
+    }
+
+    #[test]
+    fn parse_import_request_bad_path() {
+        let data = ser::to_vec_packed(&(100, "import", 200)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_import_request(message),
+            Err("Unable to parse import message: Invalid path param".to_string())
+        );
+    }
+
+    #[test]
+    fn parse_success_receive_good() {
+        let data = ser::to_vec_packed(&(100, true)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_success_receive(message),
+            Ok(Some(Message::SuccessReceive(100)))
+        );
+    }
+
+    #[test]
+    fn parse_success_transmit_good() {
+        let data = ser::to_vec_packed(&(100, true, "abcd".to_string(), 10, Some(0o00))).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_success_transmit(message),
+            Ok(Some(Message::SuccessTransmit(
+                100,
+                "abcd".to_string(),
+                10,
+                Some(0o00)
+            )))
+        );
+    }
+
+    #[test]
+    fn parse_bad_op_good() {
+        let data = ser::to_vec_packed(&(100, false, "failed".to_string())).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_bad_op(message),
+            Ok(Some(Message::Failure(100, "failed".to_string(),)))
+        );
+    }
+
+    #[test]
+    fn parse_ack_good() {
+        let data = ser::to_vec_packed(&("abcd".to_string(), true)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_ack(message),
+            Ok(Some(Message::ACK("abcd".to_string(),)))
+        );
+    }
+
+    #[test]
+    fn parse_nak_good() {
+        let data = ser::to_vec_packed(&("abcd".to_string(), false, 0, 1, 5, 10)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_nak(message),
+            Ok(Some(Message::NAK(
+                "abcd".to_string(),
+                Some(vec![(0, 1), (5, 10)])
+            )))
+        );
+    }
+
+    #[test]
+    fn parse_chunk_good() {
+        let bytes = Value::Bytes(vec![0, 0, 1, 1, 2, 2]);
+        let data = ser::to_vec_packed(&("abcd".to_string(), 10, bytes)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_chunk(message),
+            Ok(Some(Message::ReceiveChunk(
+                "abcd".to_string(),
+                10,
+                vec![0, 0, 1, 1, 2, 2]
+            )))
+        );
+    }
+
+    #[test]
+    fn parse_sync_good() {
+        let data = ser::to_vec_packed(&("abcd".to_string(),)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_sync(message),
+            Ok(Some(Message::Sync("abcd".to_string())))
+        );
+    }
+
+    #[test]
+    fn parse_metadata_good() {
+        let data = ser::to_vec_packed(&("abcd".to_string(), 100)).unwrap();
+
+        let message = de::from_slice(&data).unwrap();
+
+        assert_eq!(
+            parse_sync(message),
+            Ok(Some(Message::Metadata("abcd".to_string(), 100)))
+        );
+    }
 }
