@@ -19,25 +19,49 @@ specific interfaces and the read and write functions across those interfaces.
 
 The control block requires filling the following fields:
 
-read
+**read**
   This is an optional function pointer wrapped in an Arc that will read data from a radio, deframe 
-  those data packets, and then compose any fragmented packets into a single UDP packet. This function
-  is necessary for developers wanting uplink communication to the radio.
+  those data packets, and then compose any fragmented packets into a single UDP packet. This 
+  function is necessary for developers wanting uplink communication to the radio.
 
-write
-  This is a vector of function pointers each wrapped in Arcs that fragment a UDP packet as necessary, 
-  frame these fragments and then write these fragments across the radio interface for downlink 
-  communication. At least one write function is required for the communication service to work. If
-  multiple functions are provided, the first will be used to downlink any responses to uplinked traffic.
-  All provided write functions will also be used to spawn endpoints that mission applications can write 
-  to downlink information.
+**write**
+  This is a vector of function pointers each wrapped in Arcs that fragment a UDP packet as 
+  necessary, frame these fragments and then write these fragments across the radio interface for
+  downlink communication. At least one write function is required for the communication service to
+  work. If multiple functions are provided, the first will be used to downlink any responses to 
+  uplinked traffic. All provided write functions will also be used to spawn endpoints that mission 
+  applications can write to downlink information.
 
-read_conn
+**read_conn**
   This is the interface connection to the radio that the read function will read from.
 
-write_conn
+**write_conn**
   This is the interface connection to the radio that the write function will write to.
 
+**handler_port_min**
+  In order to coordinate communication between the comms service and different services 
+  asynchronously, handler threads are spawned to handle individual GraphQL requests. This field 
+  describes the lower end of a range of ports reserved for handler threads.
+
+**handler_port_max**
+  This field describes the upper end of a range of ports reserved for handler threads.  
+
+**timeout**
+  Timeout for the completion of GraphQL operations within message handlers in milliseconds.
+
+**ground_ip**
+  The IP address of the ground gateway. This is used to build UDP checksums.
+
+**satellite_ip**
+  The IP address of the computer that is running the comms service. This is used to build UDP 
+  checksums.
+
+**downlink_ports**
+  Ports that are used to spawn downlink endpoints, one for each of different write function 
+  provided. The number of ports provided each should match the number of write functions provided.
+
+**ground_port**
+  The port which the ground gateway is bound. Used as the destination in downlink UDP packets.
 
 Comms Configuration
 -------------------
@@ -57,5 +81,5 @@ A complete configuration file will look like the following:
   ground-ip = "192.168.8.1"
   satellite-ip = "192.168.8.2"
 
-Note that all provided fields are optional and will be filled in by default values if they are not 
-formatted correctly or not provided.
+Note that all provided fields are optional and will be filled in by default values if they are
+formatted incorrectly or missing.
