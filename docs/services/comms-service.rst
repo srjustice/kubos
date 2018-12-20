@@ -50,7 +50,31 @@ Overview
 In order to use the comms service library, you need to pass both a comms service control block and
 a comms service telemetry block wrapped in a Arc Mutex into the start function. This will spawn a read 
 loop for uplink traffic, message handlers for responses to this traffic, and downlink endpoints for 
-downlink traffic originating from with KubOS.   
+downlink traffic originating from with KubOS. Below is a snippet from the ethernet-service example
+program
+
+::
+
+  // Control block to configure communication service.
+  let controls = CommsControlBlock {
+    read: Some(Arc::new(read)),
+    write: vec![Arc::new(write)],
+    read_conn,
+    write_conn,
+    handler_port_min: config.handler_port_min,
+    handler_port_max: config.handler_port_max,
+    timeout: config.timeout,
+    ground_ip: Ipv4Addr::from_str(&config.ground_ip)?,
+    satellite_ip: Ipv4Addr::from_str(&config.satellite_ip)?,
+    downlink_ports: config.downlink_ports,
+    ground_port: config.ground_port,
+  };
+
+  // Initialize new `CommsTelemetry` object.
+  let telem = Arc::new(Mutex::new(CommsTelemetry::default()));
+
+  // Start communication service.
+  CommsService::start(controls, telem)?;
 
 
 Comms Service Control Block
