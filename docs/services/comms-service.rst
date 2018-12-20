@@ -14,6 +14,10 @@ a comms service telemetry block wrapped in a Mutex into the start function. This
 loop for uplink traffic, message handlers for responses to this traffic, and downlink endpoints for 
 downlink traffic originating from with KubOS.   
 
+.. figure:: ../images/comms_ground_request.png
+.. figure:: ../images/comms_mission_app.png
+.. figure:: ../images/comms_file_service.png
+
 Comms Service Control Block
 ---------------------------
 
