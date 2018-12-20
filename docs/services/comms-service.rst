@@ -9,17 +9,52 @@ providing a queryable endpoint for GraphQL queries and mutations to interact wit
 The ethernet service provides an example of such integration and services as a mock radio 
 interface.
 
+
+Comms Service Overview
+----------------------
+
+The communication service is designed to work under three different use cases. The first use case 
+is making requests for information from the ground. This will typically be used to debug 
+communications, services, and mission apps from the ground. The data will be uplinked to an 
+onboard radio where it will be read by the communication and then handled in message handling 
+threads. It is the responsibility of each thread to communicate with a specific service or 
+application, wait for a response, and then write that response back to the radio to downlink to 
+the ground. The complete process is visualized in the figure below:
+
+.. figure:: ../images/comms_ground_request.png
+
+The next use case that the communication service is designed to handle is to allow mission 
+applications to communicate data and telemetry to the ground during missions. This simply requires 
+the mission app to sends any data it wants to send to the ground to an designated comms service 
+endpoint which is a UDP port, and then have that thread write that data to the radio to downlink to
+the ground. This process can be seen below:
+
+.. figure:: ../images/comms_mission_app.png
+
+The third and final use case is to allow end to end communication between the ground and the 
+satellite for the file service and shell service. The request to initiate this end to end link starts
+from the ground as in the first case, but instead of passing data to a message handler, the data is 
+rerouted directly to each service where they can communicate with one of the comms service endpoints 
+and send data to the ground. This essentially creates a link between the ground and either service 
+which allows for transferring files to and from the satellite or opening a shell session with the 
+satellite.
+
+.. figure:: ../images/comms_file_service.png
+
+Comms Service Usage
+-------------------
+
+Overview
+~~~~~~~~
+
 In order to use the comms service library, you need to pass both a comms service control block and
-a comms service telemetry block wrapped in a Mutex into the start function. This will spawn a read 
+a comms service telemetry block wrapped in a Arc Mutex into the start function. This will spawn a read 
 loop for uplink traffic, message handlers for responses to this traffic, and downlink endpoints for 
 downlink traffic originating from with KubOS.   
 
-.. figure:: ../images/comms_ground_request.png
-.. figure:: ../images/comms_mission_app.png
-.. figure:: ../images/comms_file_service.png
 
 Comms Service Control Block
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The comms service control block is used to pass a specific configuration details into a 
 communications service. The control block can be filled manually or with the help of a 
@@ -74,7 +109,7 @@ The control block requires filling the following fields:
   The port which the ground gateway is bound. Used as the destination in downlink UDP packets.
 
 Comms Configuration
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Developers can use the CommsConfig library to generate easy to utilize structs from TOML files to 
 allow developers to quickly reconfigure some details passed into a comms service control block
@@ -97,7 +132,7 @@ Note that all provided fields are optional and will be filled in by default valu
 formatted incorrectly or missing.
 
 Comms Service Telemetry
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 A GraphQL comms service telemetry object holds data collected from the comms service. It is 
 provided in the library and is one of the arguments required to start the comms service. This 
