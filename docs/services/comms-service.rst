@@ -16,28 +16,28 @@ Comms Service Overview
 The communication service is designed to work under three different use cases. The first use case 
 is making requests for information from the ground. This will typically be used to debug 
 communications, services, and mission apps from the ground. The data will be uplinked to an 
-onboard radio where it will be read by the communication and then handled in message handling 
-threads. It is the responsibility of each thread to communicate with a specific service or 
-application, wait for a response, and then write that response back to the radio to downlink to 
-the ground. The complete process is visualized in the figure below:
+onboard radio where it will be read by the communication service and then handled in message 
+handling threads. It is the responsibility of each message handler to communicate with a specific 
+service or application, wait for a response, and then write that response back to the radio to 
+downlink to the ground. The complete process is visualized in the figure below:
 
 .. figure:: ../images/comms_ground_request.png
 
 The next use case that the communication service is designed to handle is to allow mission 
-applications to communicate data and telemetry to the ground during missions. This simply requires 
-the mission app to sends any data it wants to send to the ground to an designated comms service 
-endpoint which is a UDP port, and then have that thread write that data to the radio to downlink to
-the ground. This process can be seen below:
+applications to downlink data and telemetry to the ground during missions. This requires the 
+mission app to send any data to a designated comms service UDP endpoint and then have that thread 
+write that data to the radio to downlink to the ground. This process can be seen below:
 
 .. figure:: ../images/comms_mission_app.png
 
 The third and final use case is to allow end to end communication between the ground and the 
-satellite for the file service and shell service. The request to initiate this end to end link starts
-from the ground as in the first case, but instead of passing data to a message handler, the data is 
-rerouted directly to each service where they can communicate with one of the comms service endpoints 
-and send data to the ground. This essentially creates a link between the ground and either service 
-which allows for transferring files to and from the satellite or opening a shell session with the 
-satellite.
+satellite for the file service and shell service. The request to initiate this end to end link 
+starts from the ground as in the first case, but instead of passing data to a message handler, the 
+data is rerouted directly to each service where they can communicate with one of the comms service 
+endpoints and send data to the ground. This essentially creates a link between the ground and 
+either service which allows for transferring files to and from the satellite or opening a shell 
+session with the satellite. This also allows us the ability to route this traffic to a specific 
+endpoint that can support large data tranfers.
 
 .. figure:: ../images/comms_file_service.png
 
@@ -51,7 +51,7 @@ In order to use the comms service library, you need to pass both a comms service
 a comms service telemetry block wrapped in a Arc Mutex into the start function. This will spawn a read 
 loop for uplink traffic, message handlers for responses to this traffic, and downlink endpoints for 
 downlink traffic originating from with KubOS. Below is a snippet from the ethernet-service example
-program
+program:
 
 ::
 
@@ -90,7 +90,7 @@ The control block requires filling the following fields:
 
 **read**
   This is an optional function pointer wrapped in an Arc that will read data from a radio, deframe 
-  those data packets, and then compose any fragmented packets into a single UDP packet. This 
+  those data packets, and then combine any fragmented packets into a single UDP packet. This 
   function is necessary for developers wanting uplink communication to the radio.
 
 **write**
@@ -102,10 +102,12 @@ The control block requires filling the following fields:
   applications can write to downlink information.
 
 **read_conn**
-  This is the interface connection to the radio that the read function will read from.
+  This is the interface connection to the radio that the read function will read from. It is 
+  required that this connection implement Clone.
 
 **write_conn**
-  This is the interface connection to the radio that the write function will write to.
+  This is the interface connection to the radio that the write function will write to. It is 
+  required that this connection implement Clone.
 
 **handler_port_min**
   In order to coordinate communication between the comms service and different services 
@@ -123,7 +125,7 @@ The control block requires filling the following fields:
 
 **satellite_ip**
   The IP address of the computer that is running the comms service. This is used to build UDP 
-  checksums.
+  checksums and bind UDP sockets locally.
 
 **downlink_ports**
   Ports that are used to spawn downlink endpoints, one for each of different write function 
@@ -135,9 +137,9 @@ The control block requires filling the following fields:
 Comms Configuration
 ~~~~~~~~~~~~~~~~~~~
 
-Developers can use the CommsConfig library to generate easy to utilize structs from TOML files to 
-allow developers to quickly reconfigure some details passed into a comms service control block
-without needing to recompile the binary of the particular hardware service. 
+Developers can use the CommsConfig library to generate easy to use CommsConfig struct from TOML 
+files. This allows developers to quickly reconfigure some details passed into a comms service 
+control block without needing to recompile the binary of the particular hardware service. 
 
 A complete configuration file looks like the following:
 
@@ -163,7 +165,7 @@ provided in the library and is one of the arguments required to start the comms 
 shared telemetry object needs to be wrapped in an Arc Mutex so it can then be passed into a 
 service's subsystem that can be used in GraphQL queries.
 
-The comms service telemetry requires filling the following fields:
+The comms service telemetry object contains the following fields:
 
 **errors**
   Any errors that have occured while the comms service has been running.
